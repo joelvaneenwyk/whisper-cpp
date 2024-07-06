@@ -1,9 +1,11 @@
 # Custom Dictionary Words
 buildsystems
 DCMAKE
+deinit
 DWHISPER
 ggml
 loglevel
+Makefiles
 msbuild
 MSBUILD
 pwsh

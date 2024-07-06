@@ -1,11 +1,11 @@
 version: "0.2"
 ignorePaths: []
 dictionaryDefinitions:
-  - name: custom-dictionary
-    path: ./.cspell/custom-dictionary.txt
+  - name: whisper
+    path: ./.vscode/whisper.dict
     addWords: true
 dictionaries:
-  - custom-dictionary
+  - whisper
 words: []
 ignoreWords: []
 import: []
