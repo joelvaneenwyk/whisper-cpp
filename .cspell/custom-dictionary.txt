@@ -1,0 +1,12 @@
+# Custom Dictionary Words
+buildsystems
+DCMAKE
+DWHISPER
+ggml
+loglevel
+msbuild
+MSBUILD
+pwsh
+TASKFILE
+vcpkg
+VCPKG
