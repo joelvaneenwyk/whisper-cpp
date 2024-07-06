@@ -7,7 +7,9 @@ version: "3"
 vars:
   VCPKG_BOOTSTRAP_BAT: "{{.TASKFILE_DIR}}/external/vcpkg/bootstrap-vcpkg.bat"
   VCPKG_BOOTSTRAP_SH: "{{.TASKFILE_DIR}}/external/vcpkg/bootstrap-vcpkg.sh"
-  VCPKG_EXE: "{{.TASKFILE_DIR}}/external/vcpkg/vcpkg.exe"
+  VCPKG_EXE: >-
+    {{.TASKFILE_DIR}}/external/vcpkg/vcpkg{{if eq OS "windows"}}.exe{{end}}
+  VCPKG_BOOTSTRAP: '{{if eq OS "windows"}}{{.VCPKG_BOOTSTRAP_BAT}}{{ else }}{{.VCPKG_BOOTSTRAP_SH}}{{ end }}'
 
   RUN_WINDOWS: 'cmd /d /c'
   RUN_UNIX: 'sh -c'
@@ -32,7 +34,7 @@ vars:
   CONFIG: Release
   ARCHITECTURE: x64
   USE_SDL2: ON
-  GENERATOR: "Visual Studio 17 2022"
+  GENERATOR: '{{if eq OS "windows"}}Visual Studio 17 2022{{else}}Unix Makefiles{{end}}'
   TOOLCHAIN: '{{.TASKFILE_DIR}}/external/vcpkg/scripts/buildsystems/vcpkg.cmake'
   SLN: '{{ joinPath .BUILD_DIR "whisper.cpp.sln" | fromSlash }}'
 
@@ -42,6 +44,7 @@ env:
 tasks:
   default:
     cmds:
+      - task: configure
       - task: run
 
   commit-prepare:
@@ -178,25 +181,27 @@ tasks:
 
   git-submodule-init:
     status:
-      - 'test -f "{{.VCPKG_BOOTSTRAP_BAT}}"'
+      - 'test -f "{{.VCPKG_BOOTSTRAP}}"'
     cmds:
       - cmd: 'git -C "{{.TASKFILE_DIR}}" submodule update --init --recursive'
 
   vcpkg-integrate:
     deps: [vcpkg-download]
     vars:
-      OUTPUT_LOG_PATH: '{{ .BUILD_INT_DIR }}/vcpkg-integrate.log'
+      OUTPUT_LOG_PATH: '{{ joinPath .BUILD_INT_DIR "vcpkg-integrate.log" }}'
     status:
       - 'test -f "{{ .OUTPUT_LOG_PATH}} "'
     cmds:
-      - cmd: '{{.RUN}} "{{ fromSlash .VCPKG_EXE }}" integrate install >"{{ fromSlash .OUTPUT_LOG_PATH }}"'
+      - cmd: |
+          mkdir -p "{{ dir .OUTPUT_LOG_PATH | fromSlash }}"
+          "{{ fromSlash .VCPKG_EXE }}" integrate install >"{{ fromSlash .OUTPUT_LOG_PATH }}"
 
   vcpkg-download:
     deps: [git-submodule-init]
     status:
       - 'test -f "{{ fromSlash .VCPKG_EXE}}"'
     cmds:
-      - cmd: '{{.RUN}} "{{ fromSlash .VCPKG_BOOTSTRAP_BAT }}" -disableMetrics'
+      - cmd: '{{.RUN}} "{{ fromSlash .VCPKG_BOOTSTRAP }}" -disableMetrics'
 
   update-samples:
     status:
