@@ -190,17 +190,30 @@ tasks:
     vars:
       OUTPUT_LOG_PATH: '{{ joinPath .BUILD_INT_DIR "vcpkg-integrate.log" }}'
     status:
-      - 'test -f "{{ .OUTPUT_LOG_PATH}} "'
+      - 'test -f "{{ .OUTPUT_LOG_PATH}}"'
+      - 'test "{{ .VCPKG_BRANCH }}" -ne "HEAD"'
     cmds:
-      - cmd: |
+      - cmd: >-
           mkdir -p "{{ dir .OUTPUT_LOG_PATH | fromSlash }}"
-          "{{ fromSlash .VCPKG_EXE }}" integrate install >"{{ fromSlash .OUTPUT_LOG_PATH }}"
+        ignore_error: true
+      - cmd: >
+          "{{ fromSlash .VCPKG_EXE }}" integrate install
+      - cmd: >-
+          "{{ fromSlash .VCPKG_EXE }}" install --allow-unsupported
 
   vcpkg-download:
     deps: [git-submodule-init]
-    status:
-      - 'test -f "{{ fromSlash .VCPKG_EXE}}"'
+    # status:
+    #   - 'test -f "{{ fromSlash .VCPKG_EXE}}"'
     cmds:
+      - cmd: git add .
+      - cmd: |
+          if [ ! "$(git rev-parse --abbrev-ref --symbolic-full-name HEAD || true)" = "HEAD" ]; then
+            git submodule deinit -f external/vcpkg
+          fi
+        ignore_error: true
+      - cmd: git submodule update --init --recursive --checkout
+        ignore_error: true
       - cmd: '{{.RUN}} "{{ fromSlash .VCPKG_BOOTSTRAP }}" -disableMetrics'
 
   update-samples:
