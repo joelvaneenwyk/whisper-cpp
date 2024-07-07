@@ -216,7 +216,7 @@ ffmpeg -i input.mp3 -ar 16000 -ac 1 -c:a pcm_s16le output.wav
 
 If you want some extra audio samples to play with, simply run:
 
-```
+```bash
 make samples
 ```
 
@@ -224,7 +224,7 @@ This will download a few more audio files from Wikipedia and convert them to 16-
 
 You can download and run the other models as follows:
 
-```
+```bash
 make tiny.en
 make tiny
 make base.en
@@ -356,7 +356,7 @@ This can result in significant speedup in encoder performance. Here are the inst
 
 - Generate an OpenVINO encoder model. For example, to generate a `base.en` model, use:
 
-  ```
+  ```bash
   python convert-whisper-to-openvino.py --model base.en
   ```
 
@@ -417,7 +417,7 @@ First, make sure you have installed `cuda`: <https://developer.nvidia.com/cuda-d
 
 Now build `whisper.cpp` with CUDA support:
 
-```
+```bash
 make clean
 WHISPER_CUDA=1 make -j
 ```
@@ -430,13 +430,17 @@ First, make sure you have installed `CLBlast` for your OS or Distribution: <http
 
 Now build `whisper.cpp` with CLBlast support:
 
-```
-Makefile:
+### Makefile
+
+```bash
 cd whisper.cpp
 make clean
 WHISPER_CLBLAST=1 make -j
+```
 
-CMake:
+### CMake
+
+```bash
 cd whisper.cpp
 cmake -B build -DWHISPER_CLBLAST=ON
 cmake --build build -j --config Release
@@ -451,7 +455,7 @@ First, make sure you have installed `openblas`: <https://www.openblas.net/>
 
 Now build `whisper.cpp` with OpenBLAS support:
 
-```
+```bash
 make clean
 WHISPER_OPENBLAS=1 make -j
 ```
@@ -463,7 +467,7 @@ First, make sure you have installed Intel's MKL runtime and development packages
 
 Now build `whisper.cpp` with Intel MKL BLAS support:
 
-```
+```bash
 source /opt/intel/oneapi/setvars.sh
 mkdir build
 cd build
@@ -507,7 +511,7 @@ docker run -it --rm \
 
 You can install pre-built binaries for whisper.cpp or build it from source using [Conan](https://conan.io/). Use the following command:
 
-```
+```bash
 conan install --requires="whisper-cpp/[*]" --build=missing
 ```
 
@@ -522,8 +526,7 @@ For detailed instructions on how to use Conan, please refer to the [Conan docume
 Here is another example of transcribing a [3:24 min speech](https://upload.wikimedia.org/wikipedia/commons/1/1f/George_W_Bush_Columbia_FINAL.ogg)
 in about half a minute on a MacBook M1 Pro, using `medium.en` model:
 
-<details>
-  <summary>Expand to see the result</summary>
+Expand to see the result:
 
 ```text
 $ ./main -m models/ggml-medium.en.bin -f samples/gb1.wav -t 8
@@ -621,6 +624,8 @@ to highlight words with high or low confidence:
 ```bash
 ./main -m models/ggml-base.en.bin -f samples/gb0.wav --print-colors
 ```
+
+<!-- markdownlint-disable MD033 -->
 
 <img width="965" alt="image" src="https://user-images.githubusercontent.com/1991296/197356445-311c8643-9397-4e5e-b46e-0b4b4daa2530.png">
 
