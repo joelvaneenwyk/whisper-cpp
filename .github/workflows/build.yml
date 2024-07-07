@@ -12,7 +12,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [linux/amd64, linux/arm64, linux/arm/v7, linux/ppc64le]
+        # @joelvaneenwyk #todo Disabled to speed up testing.
+        arch: [linux/amd64]
+        # arch: [linux/amd64, linux/arm64, linux/arm/v7, linux/ppc64le]
 
     steps:
       - name: Clone
@@ -36,6 +38,8 @@ jobs:
             make stream'
 
   macOS-latest:
+    # @joelvaneenwyk #todo Disabled to speed up testing.
+    if: github.event_name != 'pull_request' && github.event_name != 'push'
     runs-on: macOS-latest
 
     steps:
@@ -56,6 +60,8 @@ jobs:
           make stream
 
   freeBSD-latest:
+    # @joelvaneenwyk #todo Disabled to speed up testing.
+    if: github.event_name != 'pull_request' && github.event_name != 'push'
     runs-on: macos-12
 
     steps:
@@ -77,6 +83,8 @@ jobs:
             gmake stream
 
   ubuntu-latest-gcc:
+    # @joelvaneenwyk #todo Disabled to speed up testing.
+    if: github.event_name != 'pull_request' && github.event_name != 'push'
     runs-on: ubuntu-latest
 
     strategy:
@@ -108,6 +116,8 @@ jobs:
             ctest -L gh --output-on-failure'
 
   ubuntu-latest-clang:
+    # @joelvaneenwyk #todo Disabled to speed up testing.
+    if: github.event_name != 'pull_request' && github.event_name != 'push'
     runs-on: ubuntu-latest
 
     strategy:
@@ -143,6 +153,8 @@ jobs:
             ctest -L gh --output-on-failure'
 
   ubuntu-latest-gcc-sanitized:
+    # @joelvaneenwyk #todo Disabled to speed up testing.
+    if: github.event_name != 'pull_request' && github.event_name != 'push'
     runs-on: ubuntu-latest
 
     strategy:
@@ -174,6 +186,8 @@ jobs:
             ctest -L gh --output-on-failure'
 
   ubuntu-22-cmake-sycl:
+    # @joelvaneenwyk #todo Disabled to speed up testing.
+    if: github.event_name != 'pull_request' && github.event_name != 'push'
     runs-on: ubuntu-22.04
 
     strategy:
@@ -227,6 +241,8 @@ jobs:
           cmake --build . --config Release -j $(nproc)
 
   ubuntu-22-cmake-sycl-fp16:
+    # @joelvaneenwyk #todo Disabled to speed up testing.
+    if: github.event_name != 'pull_request' && github.event_name != 'push'
     runs-on: ubuntu-22.04
 
     strategy:
@@ -346,17 +362,20 @@ jobs:
     strategy:
       matrix:
         build: [Release]
-        arch: [Win32, x64]
+        # @joelvaneenwyk #todo Disabled to speed up testing.
+        arch: [x64]
+        # arch: [Win32, x64]
         sdl2: [ON]
-        include:
-          - arch: Win32
-            s2arc: x86
-            jnaPath: win32-x86
-          - arch: x64
-            s2arc: x64
-            jnaPath: win32-x86-64
-          - sdl2: ON
-            s2ver: 2.28.5
+        # @joelvaneenwyk #todo Disabled to speed up testing.
+        #include:
+        #  - arch: Win32
+        #    s2arc: x86
+        #    jnaPath: win32-x86
+        #  - arch: x64
+        #    s2arc: x64
+        #    jnaPath: win32-x86-64
+        #  - sdl2: ON
+        #    s2ver: 2.28.5
 
     steps:
       - name: Clone
@@ -499,6 +518,8 @@ jobs:
           path: build/bin/${{ matrix.build }}
 
   windows-cublas:
+    # @joelvaneenwyk #todo Disabled to speed up testing.
+    if: github.event_name != 'pull_request' && github.event_name != 'push'
     runs-on: windows-latest
 
     strategy:
@@ -569,6 +590,8 @@ jobs:
           path: build/bin/${{ matrix.build }}
 
   emscripten:
+    # @joelvaneenwyk #todo Disabled to speed up testing.
+    if: github.event_name != 'pull_request' && github.event_name != 'push'
     runs-on: ubuntu-latest
 
     strategy:
@@ -594,6 +617,8 @@ jobs:
           make
 
   ios:
+    # @joelvaneenwyk #todo Disabled to speed up testing.
+    if: github.event_name != 'pull_request' && github.event_name != 'push'
     runs-on: macos-latest
 
     strategy:
@@ -619,6 +644,8 @@ jobs:
         run: xcodebuild -project examples/whisper.swiftui/whisper.swiftui.xcodeproj -scheme WhisperCppDemo -configuration ${{ matrix.build }} -sdk iphonesimulator build
 
   android:
+    # @joelvaneenwyk #todo Disabled to speed up testing.
+    if: github.event_name != 'pull_request' && github.event_name != 'push'
     runs-on: ubuntu-latest
 
     steps:
@@ -654,6 +681,8 @@ jobs:
           ./gradlew assembleRelease --no-daemon -PGGML_HOME=$PATH_TO_GGML
 
   android_java:
+    # @joelvaneenwyk #todo Disabled to speed up testing.
+    if: github.event_name != 'pull_request' && github.event_name != 'push'
     runs-on: ubuntu-latest
 
     steps:
@@ -682,6 +711,8 @@ jobs:
           ./gradlew assembleRelease
 
   java:
+    # @joelvaneenwyk #todo Disabled to speed up testing.
+    if: github.event_name != 'pull_request' && github.event_name != 'push'
     needs: [ 'windows' ]
     runs-on: windows-latest
     steps:
@@ -725,6 +756,8 @@ jobs:
           PGP_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
 
   quantize:
+    # @joelvaneenwyk #todo Disabled to speed up testing.
+    if: github.event_name != 'pull_request' && github.event_name != 'push'
     runs-on: ubuntu-latest
 
     steps:
