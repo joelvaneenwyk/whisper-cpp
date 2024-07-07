@@ -75,6 +75,11 @@ tasks:
           -ExecutionPolicy Bypass
           -Command "Start-BitsTransfer -Source '{{ .MODEL_URL }}' -Destination '{{ fromSlash .MODEL_OUTPUT_PATH }}'"
 
+  vcpkg:
+    deps: [vcpkg-integrate]
+    cmds:
+      - cmd: '{{.RUN}} "{{.VCPKG_EXE}}" {{ .CLI_ARGS }}'
+
   check:
     deps: [build]
     vars:
