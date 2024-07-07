@@ -32,7 +32,7 @@ Supported platforms:
 - [x] [Java](bindings/java/README.md)
 - [x] Linux / [FreeBSD](https://github.com/ggerganov/whisper.cpp/issues/56#issuecomment-1350920264)
 - [x] [WebAssembly](examples/whisper.wasm)
-- [x] Windows ([MSVC](https://github.com/ggerganov/whisper.cpp/blob/master/.github/workflows/build.yml#L117-L144) and [MinGW](https://github.com/ggerganov/whisper.cpp/issues/168)]
+- [x] Windows ([MSVC](https://github.com/ggerganov/whisper.cpp/blob/master/.github/workflows/build.yml#L117-L144) and [MinGW](https://github.com/ggerganov/whisper.cpp/issues/168))
 - [x] [Raspberry Pi](https://github.com/ggerganov/whisper.cpp/discussions/166)
 - [x] [docker](https://github.com/ggerganov/whisper.cpp/pkgs/container/whisper.cpp)
 
@@ -42,15 +42,15 @@ The rest of the code is part of the [`ggml`](https://github.com/ggerganov/ggml) 
 Having such a lightweight implementation of the model allows to easily integrate it in different platforms and applications.
 As an example, here is a video of running the model on an iPhone 13 device - fully offline, on-device: [whisper.objc](examples/whisper.objc)
 
-https://user-images.githubusercontent.com/1991296/197385372-962a6dea-bca1-4d50-bf96-1d8c27b98c81.mp4
+<https://user-images.githubusercontent.com/1991296/197385372-962a6dea-bca1-4d50-bf96-1d8c27b98c81.mp4>
 
 You can also easily make your own offline voice assistant application: [command](examples/command)
 
-https://user-images.githubusercontent.com/1991296/204038393-2f846eae-c255-4099-a76d-5735c25c49da.mp4
+<https://user-images.githubusercontent.com/1991296/204038393-2f846eae-c255-4099-a76d-5735c25c49da.mp4>
 
 On Apple Silicon, the inference runs fully on the GPU via Metal:
 
-https://github.com/ggerganov/whisper.cpp/assets/1991296/c82e8f86-60dc-49f2-b048-d2fdbd6b5225
+<https://github.com/ggerganov/whisper.cpp/assets/1991296/c82e8f86-60dc-49f2-b048-d2fdbd6b5225>
 
 Or you can even run it straight in the browser: [talk.wasm](examples/talk.wasm)
 
@@ -413,7 +413,7 @@ For more information about the Core ML implementation please refer to PR [#1037]
 ## NVIDIA GPU support
 
 With NVIDIA cards the processing of the models is done efficiently on the GPU via cuBLAS and custom CUDA kernels.
-First, make sure you have installed `cuda`: https://developer.nvidia.com/cuda-downloads
+First, make sure you have installed `cuda`: <https://developer.nvidia.com/cuda-downloads>
 
 Now build `whisper.cpp` with CUDA support:
 
@@ -426,7 +426,7 @@ WHISPER_CUDA=1 make -j
 
 For cards and integrated GPUs that support OpenCL, the Encoder processing can be largely offloaded to the GPU through CLBlast. This is especially useful for users with AMD APUs or low end devices for up to ~2x speedup.
 
-First, make sure you have installed `CLBlast` for your OS or Distribution: https://github.com/CNugteren/CLBlast
+First, make sure you have installed `CLBlast` for your OS or Distribution: <https://github.com/CNugteren/CLBlast>
 
 Now build `whisper.cpp` with CLBlast support:
 
@@ -447,7 +447,7 @@ Run all the examples as usual.
 ## BLAS CPU support via OpenBLAS
 
 Encoder processing can be accelerated on the CPU via OpenBLAS.
-First, make sure you have installed `openblas`: https://www.openblas.net/
+First, make sure you have installed `openblas`: <https://www.openblas.net/>
 
 Now build `whisper.cpp` with OpenBLAS support:
 
@@ -459,7 +459,7 @@ WHISPER_OPENBLAS=1 make -j
 ## BLAS CPU support via Intel MKL
 
 Encoder processing can be accelerated on the CPU via the BLAS compatible interface of Intel's Math Kernel Library.
-First, make sure you have installed Intel's MKL runtime and development packages: https://www.intel.com/content/www/us/en/developer/tools/oneapi/onemkl-download.html
+First, make sure you have installed Intel's MKL runtime and development packages: <https://www.intel.com/content/www/us/en/developer/tools/oneapi/onemkl-download.html>
 
 Now build `whisper.cpp` with Intel MKL BLAS support:
 
@@ -611,7 +611,7 @@ make stream
 ./stream -m ./models/ggml-base.en.bin -t 8 --step 500 --length 5000
 ```
 
-https://user-images.githubusercontent.com/1991296/194935793-76afede7-cfa8-48d8-a80f-28ba83be7d09.mp4
+<https://user-images.githubusercontent.com/1991296/194935793-76afede7-cfa8-48d8-a80f-28ba83be7d09.mp4>
 
 ## Confidence color-coding
 
@@ -691,7 +691,7 @@ main: processing './samples/jfk.wav' (176000 samples, 11.0 sec), 4 threads, 1 pr
 
 ## Speaker segmentation via tinydiarize (experimental)
 
-More information about this approach is available here: https://github.com/ggerganov/whisper.cpp/pull/1058
+More information about this approach is available here: <https://github.com/ggerganov/whisper.cpp/pull/1058>
 
 Sample usage:
 
@@ -729,7 +729,7 @@ source ./samples/jfk.wav.wts
 ffplay ./samples/jfk.wav.mp4
 ```
 
-https://user-images.githubusercontent.com/1991296/199337465-dbee4b5e-9aeb-48a3-b1c6-323ac4db5b2c.mp4
+<https://user-images.githubusercontent.com/1991296/199337465-dbee4b5e-9aeb-48a3-b1c6-323ac4db5b2c.mp4>
 
 ---
 
@@ -739,7 +739,7 @@ source ./samples/mm0.wav.wts
 ffplay ./samples/mm0.wav.mp4
 ```
 
-https://user-images.githubusercontent.com/1991296/199337504-cc8fd233-0cb7-4920-95f9-4227de3570aa.mp4
+<https://user-images.githubusercontent.com/1991296/199337504-cc8fd233-0cb7-4920-95f9-4227de3570aa.mp4>
 
 ---
 
@@ -749,7 +749,7 @@ source ./samples/gb0.wav.wts
 ffplay ./samples/gb0.wav.mp4
 ```
 
-https://user-images.githubusercontent.com/1991296/199337538-b7b0c7a3-2753-4a88-a0cd-f28a317987ba.mp4
+<https://user-images.githubusercontent.com/1991296/199337538-b7b0c7a3-2753-4a88-a0cd-f28a317987ba.mp4>
 
 ---
 
@@ -762,7 +762,7 @@ Use the [scripts/bench-wts.sh](https://github.com/ggerganov/whisper.cpp/blob/mas
 ffplay ./samples/jfk.wav.all.mp4
 ```
 
-https://user-images.githubusercontent.com/1991296/223206245-2d36d903-cf8e-4f09-8c3b-eb9f9c39d6fc.mp4
+<https://user-images.githubusercontent.com/1991296/223206245-2d36d903-cf8e-4f09-8c3b-eb9f9c39d6fc.mp4>
 
 ---
 
@@ -798,8 +798,8 @@ The original models are converted to a custom binary format. This allows to pack
 You can download the converted models using the [models/download-ggml-model.sh](models/download-ggml-model.sh) script
 or manually from here:
 
-- https://huggingface.co/ggerganov/whisper.cpp
-- https://ggml.ggerganov.com
+- <https://huggingface.co/ggerganov/whisper.cpp>
+- <https://ggml.ggerganov.com>
 
 For more details, see the conversion script [models/convert-pt-to-ggml.py](models/convert-pt-to-ggml.py) or [models/README.md](models/README.md).
 
