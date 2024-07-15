@@ -11,7 +11,7 @@ vars:
     {{.TASKFILE_DIR}}/external/vcpkg/vcpkg{{if eq OS "windows"}}.exe{{end}}
   VCPKG_BOOTSTRAP: '{{if eq OS "windows"}}{{.VCPKG_BOOTSTRAP_BAT}}{{ else }}{{.VCPKG_BOOTSTRAP_SH}}{{ end }}'
 
-  RUN_WINDOWS: 'cmd /d /c'
+  RUN_WINDOWS: 'cmd /D /E:ON /C'
   RUN_UNIX: 'sh -c'
   RUN: '{{if eq OS "windows"}}{{.RUN_WINDOWS}}{{ else }}{{.RUN_UNIX}}{{ end }}'
 
