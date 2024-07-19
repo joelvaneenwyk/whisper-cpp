@@ -28,15 +28,15 @@ vars:
       done
   MSBUILD_EXE: '{{fromSlash .MSBUILD_EXE_RAW}}'
 
-  BUILD_INT_DIR: "{{.TASKFILE_DIR}}/.build/tasks"
-  BUILD_DIR: "{{fromSlash .BUILD_INT_DIR}}"
+  BUILD_INT_DIR: ".build/tasks"
+  BUILD_DIR: "{{ joinPath .TASKFILE_DIR .BUILD_INT_DIR }}"
 
   CONFIG: Release
   ARCHITECTURE: x64
   USE_SDL2: ON
   GENERATOR: '{{if eq OS "windows"}}Visual Studio 17 2022{{else}}Unix Makefiles{{end}}'
-  TOOLCHAIN: '{{.TASKFILE_DIR}}/external/vcpkg/scripts/buildsystems/vcpkg.cmake'
-  SLN: '{{ joinPath .BUILD_DIR "whisper.cpp.sln" | fromSlash }}'
+  TOOLCHAIN: 'external/vcpkg/scripts/buildsystems/vcpkg.cmake'
+  SLN_PATH: .build/tasks/whisper.cpp.sln
 
 env:
   VCPKG_DISABLE_METRICS: 1
@@ -121,25 +121,37 @@ tasks:
 
   build:
     deps: [configure]
+    vars:
+      SOLUTION: '{{ joinPath .TASKFILE_DIR .SLN_PATH }}'
     sources:
-      - '{{ .SLN }}'
+      - '{{ .SOLUTION }}'
     generates:
       - '{{ joinPath .BUILD_DIR "bin" "Debug" "main.exe" }}'
       - '{{ joinPath .BUILD_DIR "bin" "Release" "main.exe" }}'
     cmds:
       - task: msbuild
-        vars: { CONFIG: Debug, PLATFORM: '{{ .ARCHITECTURE }}', SLN: '{{ .SLN }}' }
+        vars: {
+          CONFIG: Debug,
+          PLATFORM: '{{ .ARCHITECTURE }}',
+          SLN: '{{ .SOLUTION }}'
+        }
       - task: msbuild
-        vars: { CONFIG: Release, PLATFORM: '{{ .ARCHITECTURE }}', SLN: '{{ .SLN }}' }
+        vars: {
+          CONFIG: Release,
+          PLATFORM: '{{ .ARCHITECTURE }}',
+          SLN: '{{ .SOLUTION }}'
+        }
 
   configure:
     deps: [vcpkg-integrate]
+    vars:
+      SOLUTION: '{{ joinPath .TASKFILE_DIR .SLN_PATH }}'
     preconditions:
       - 'cmake --version'
     sources:
       - CMakeLists.txt
     generates:
-      - '{{ .SLN }}'
+      - '{{ .SOLUTION }}'
     cmds:
       - cmd: >
           cmake
@@ -149,10 +161,12 @@ tasks:
           -A "{{ .ARCHITECTURE }}"
           -DCMAKE_BUILD_TYPE="{{ .CONFIG }}"
           -DWHISPER_SDL2={{ .USE_SDL2 }}
-          -DCMAKE_TOOLCHAIN_FILE="{{ fromSlash .TOOLCHAIN }}"
+          -DCMAKE_TOOLCHAIN_FILE="{{ joinPath .TASKFILE_DIR .TOOLCHAIN }}"
 
   msbuild:
     internal: true
+    requires:
+      vars: [MSBUILD_EXE, SLN]
     deps: [install-dependencies]
     vars:
       CONFIG: '{{.CONFIG | default "Debug"}}'
@@ -194,6 +208,7 @@ tasks:
     deps: [vcpkg-download]
     vars:
       OUTPUT_LOG_PATH: '{{ joinPath .BUILD_INT_DIR "vcpkg-integrate.log" }}'
+    dir: "{{.TASKFILE_DIR}}"
     status:
       - 'test -f "{{ .OUTPUT_LOG_PATH}}"'
       - 'test "{{ .VCPKG_BRANCH }}" -ne "HEAD"'
