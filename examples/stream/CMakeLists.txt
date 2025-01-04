@@ -1,6 +1,5 @@
 if (WHISPER_SDL2)
-    # stream
-    set(TARGET stream)
+    set(TARGET whisper-stream)
     add_executable(${TARGET} stream.cpp)
 
     include(DefaultTargetOptions)
@@ -11,4 +10,6 @@ if (WHISPER_SDL2)
         $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
         $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
         ${CMAKE_THREAD_LIBS_INIT})
+
+    install(TARGETS ${TARGET} RUNTIME)
 endif ()

@@ -9,54 +9,50 @@ from typing import Dict
 from typing import Optional
 from ane_transformers.reference.layer_norm import LayerNormANE as LayerNormANEBase
 from coremltools.models.neural_network.quantization_utils import quantize_weights
-from whisper.model import (
-    Whisper,
-    AudioEncoder,
-    TextDecoder,
-    ResidualAttentionBlock,
-    MultiHeadAttention,
-    ModelDimensions,
-)
+from whisper.model import Whisper, AudioEncoder, TextDecoder, ResidualAttentionBlock, MultiHeadAttention, ModelDimensions
 from whisper import load_model
 
-
 # Use for changing dim of input in encoder and decoder embeddings
-def linear_to_conv2d_map(state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs):
+def linear_to_conv2d_map(state_dict, prefix, local_metadata, strict,
+                         missing_keys, unexpected_keys, error_msgs):
     """
     Unsqueeze twice to map nn.Linear weights to nn.Conv2d weights
     """
     for k in state_dict:
-        is_attention = all(substr in k for substr in ["attn", ".weight"])
-        is_mlp = any(k.endswith(s) for s in ["mlp.0.weight", "mlp.2.weight"])
+        is_attention = all(substr in k for substr in ['attn', '.weight'])
+        is_mlp = any(k.endswith(s) for s in ['mlp.0.weight', 'mlp.2.weight'])
 
         if (is_attention or is_mlp) and len(state_dict[k].shape) == 2:
             state_dict[k] = state_dict[k][:, :, None, None]
 
 
-def correct_for_bias_scale_order_inversion(
-    state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs
-):
-    state_dict[prefix + "bias"] = state_dict[prefix + "bias"] / state_dict[prefix + "weight"]
+def correct_for_bias_scale_order_inversion(state_dict, prefix, local_metadata,
+                                           strict, missing_keys,
+                                           unexpected_keys, error_msgs):
+    state_dict[prefix + 'bias'] = state_dict[prefix + 'bias'] / state_dict[prefix + 'weight']
     return state_dict
 
-
 class LayerNormANE(LayerNormANEBase):
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._register_load_state_dict_pre_hook(correct_for_bias_scale_order_inversion)
-
+        self._register_load_state_dict_pre_hook(
+            correct_for_bias_scale_order_inversion)
 
 class MultiHeadAttentionANE(MultiHeadAttention):
     def __init__(self, n_state: int, n_head: int):
         super().__init__(n_state, n_head)
-        self.query = nn.Conv2d(n_state, n_state, kernel_size=1)
+        self.query =  nn.Conv2d(n_state, n_state, kernel_size=1)
         self.key = nn.Conv2d(n_state, n_state, kernel_size=1, bias=False)
         self.value = nn.Conv2d(n_state, n_state, kernel_size=1)
         self.out = nn.Conv2d(n_state, n_state, kernel_size=1)
 
-    def forward(
-        self, x: Tensor, xa: Optional[Tensor] = None, mask: Optional[Tensor] = None, kv_cache: Optional[dict] = None
-    ):
+    def forward(self,
+                x: Tensor,
+                xa: Optional[Tensor] = None,
+                mask: Optional[Tensor] = None,
+                kv_cache: Optional[dict] = None):
+
         q = self.query(x)
 
         if kv_cache is None or xa is None or self.key not in kv_cache:
@@ -75,20 +71,22 @@ class MultiHeadAttentionANE(MultiHeadAttention):
         return self.out(wv), qk
 
     def qkv_attention_ane(self, q: Tensor, k: Tensor, v: Tensor, mask: Optional[Tensor] = None):
+
         _, dim, _, seqlen = q.size()
 
         dim_per_head = dim // self.n_head
 
-        scale = float(dim_per_head) ** -0.5
+        scale = float(dim_per_head)**-0.5
 
         q = q * scale
 
         mh_q = q.split(dim_per_head, dim=1)
-        mh_k = k.transpose(1, 3).split(dim_per_head, dim=3)
+        mh_k = k.transpose(1,3).split(dim_per_head, dim=3)
         mh_v = v.split(dim_per_head, dim=1)
 
         mh_qk = [
-            torch.einsum("bchq,bkhc->bkhq", [qi, ki]) for qi, ki in zip(mh_q, mh_k)
+            torch.einsum('bchq,bkhc->bkhq', [qi, ki])
+            for qi, ki in zip(mh_q, mh_k)
         ]  # (batch_size, max_seq_length, 1, max_seq_length) * n_heads
 
         if mask is not None:
@@ -96,9 +94,7 @@ class MultiHeadAttentionANE(MultiHeadAttention):
                 mh_qk[head_idx] = mh_qk[head_idx] + mask[:, :seqlen, :, :seqlen]
 
         attn_weights = [aw.softmax(dim=1) for aw in mh_qk]  # (batch_size, max_seq_length, 1, max_seq_length) * n_heads
-        attn = [
-            torch.einsum("bkhq,bchk->bchq", wi, vi) for wi, vi in zip(attn_weights, mh_v)
-        ]  # (batch_size, dim_per_head, 1, max_seq_length) * n_heads
+        attn = [torch.einsum('bkhq,bchk->bchq', wi, vi) for wi, vi in zip(attn_weights, mh_v)]  # (batch_size, dim_per_head, 1, max_seq_length) * n_heads
         attn = torch.cat(attn, dim=1)  # (batch_size, dim, 1, max_seq_length)
 
         return attn, torch.cat(mh_qk, dim=1).float().detach()
@@ -107,14 +103,16 @@ class MultiHeadAttentionANE(MultiHeadAttention):
 class ResidualAttentionBlockANE(ResidualAttentionBlock):
     def __init__(self, n_state: int, n_head: int, cross_attention: bool = False):
         super().__init__(n_state, n_head, cross_attention)
-        self.attn = MultiHeadAttentionANE(n_state, n_head)
+        self.attn =  MultiHeadAttentionANE(n_state, n_head)
         self.attn_ln = LayerNormANE(n_state)
-        self.cross_attn = MultiHeadAttentionANE(n_state, n_head) if cross_attention else None
-        self.cross_attn_ln = LayerNormANE(n_state) if cross_attention else None
+        self.cross_attn =  MultiHeadAttentionANE(n_state, n_head) if cross_attention else None
+        self.cross_attn_ln =  LayerNormANE(n_state) if cross_attention else None
 
         n_mlp = n_state * 4
-        self.mlp = nn.Sequential(
-            nn.Conv2d(n_state, n_mlp, kernel_size=1), nn.GELU(), nn.Conv2d(n_mlp, n_state, kernel_size=1)
+        self.mlp =  nn.Sequential(
+            nn.Conv2d(n_state, n_mlp, kernel_size=1),
+            nn.GELU(),
+            nn.Conv2d(n_mlp, n_state, kernel_size=1)
         )
         self.mlp_ln = LayerNormANE(n_state)
 
@@ -123,7 +121,9 @@ class AudioEncoderANE(AudioEncoder):
     def __init__(self, n_mels: int, n_ctx: int, n_state: int, n_head: int, n_layer: int):
         super().__init__(n_mels, n_ctx, n_state, n_head, n_layer)
 
-        self.blocks = nn.ModuleList([ResidualAttentionBlockANE(n_state, n_head) for _ in range(n_layer)])
+        self.blocks = nn.ModuleList(
+            [ResidualAttentionBlockANE(n_state, n_head) for _ in range(n_layer)]
+        )
         self.ln_post = LayerNormANE(n_state)
 
     def forward(self, x: Tensor):
@@ -137,7 +137,7 @@ class AudioEncoderANE(AudioEncoder):
         assert x.shape[1:] == self.positional_embedding.shape[::-1], "incorrect audio shape"
 
         # Add positional embedding and add dummy dim for ANE
-        x = (x + self.positional_embedding.transpose(0, 1)).to(x.dtype).unsqueeze(2)
+        x = (x + self.positional_embedding.transpose(0,1)).to(x.dtype).unsqueeze(2)
 
         for block in self.blocks:
             x = block(x)
@@ -147,15 +147,15 @@ class AudioEncoderANE(AudioEncoder):
 
         return x
 
-
 class TextDecoderANE(TextDecoder):
+
     def __init__(self, n_vocab: int, n_ctx: int, n_state: int, n_head: int, n_layer: int):
         super().__init__(n_vocab, n_ctx, n_state, n_head, n_layer)
 
-        self.blocks = nn.ModuleList(
+        self.blocks= nn.ModuleList(
             [ResidualAttentionBlockANE(n_state, n_head, cross_attention=True) for _ in range(n_layer)]
         )
-        self.ln = LayerNormANE(n_state)
+        self.ln= LayerNormANE(n_state)
 
     def forward(self, x: Tensor, xa: Tensor, kv_cache: Optional[dict] = None):
         """
@@ -169,8 +169,8 @@ class TextDecoderANE(TextDecoder):
         x = x.to(xa.dtype)
 
         # Reformat for ANE
-        mask = self.mask[None, None, :, :].permute(0, 3, 1, 2)
-        x = x.transpose(1, 2).unsqueeze(2)
+        mask = self.mask[None, None, :, :].permute(0,3,1,2)
+        x = x.transpose(1,2).unsqueeze(2)
 
         for block in self.blocks:
             x = block(x, xa, mask=mask, kv_cache=kv_cache)
@@ -178,21 +178,20 @@ class TextDecoderANE(TextDecoder):
         x = self.ln(x)
 
         # Reformat back from ANE
-        x = x.permute(0, 2, 3, 1).squeeze(0)
+        x = x.permute(0,2,3,1).squeeze(0)
 
         # ANE can only load tensors with dim size of at most 16,384 - whisper uses 51,864 (en) or 51,865 (multi-lang) tokens so we need to compute in chunks
         if self.token_embedding.weight.shape[0] >= 51865:
             # split in 11 chunks - 4715 each
-            splits = self.token_embedding.weight.split(self.token_embedding.weight.shape[0] // 11, dim=0)
-            logits = torch.cat([torch.einsum("bid,jd->bij", x, split) for split in splits]).view(*x.shape[:2], -1)
+            splits = self.token_embedding.weight.split(self.token_embedding.weight.shape[0]//11, dim=0)
+            logits = torch.cat([torch.einsum('bid,jd->bij', x, split) for split in splits]).view(*x.shape[:2], -1)
         else:
             # split in 12 chunks - 4322 each
-            assert self.token_embedding.weight.shape[0] == 51864
-            splits = self.token_embedding.weight.split(self.token_embedding.weight.shape[0] // 12, dim=0)
-            logits = torch.cat([torch.einsum("bid,jd->bij", x, split) for split in splits]).view(*x.shape[:2], -1)
+            assert(self.token_embedding.weight.shape[0] == 51864)
+            splits = self.token_embedding.weight.split(self.token_embedding.weight.shape[0]//12, dim=0)
+            logits = torch.cat([torch.einsum('bid,jd->bij', x, split) for split in splits]).view(*x.shape[:2], -1)
 
         return logits
-
 
 class WhisperANE(Whisper):
     def __init__(self, dims: ModelDimensions):
@@ -237,7 +236,6 @@ class WhisperANE(Whisper):
         self.decoder.apply(install_hooks)
         return cache, hooks
 
-
 def convert_encoder(hparams, model, quantize=False):
     model.eval()
 
@@ -247,17 +245,16 @@ def convert_encoder(hparams, model, quantize=False):
 
     model = ct.convert(
         traced_model,
-        convert_to=None if quantize else "mlprogram",  # convert will fail if weights are quantized, not sure why
+        convert_to=None if quantize else "mlprogram", # convert will fail if weights are quantized, not sure why
         inputs=[ct.TensorType(name="logmel_data", shape=input_shape)],
         outputs=[ct.TensorType(name="output")],
-        compute_units=ct.ComputeUnit.ALL,
+        compute_units=ct.ComputeUnit.ALL
     )
 
     if quantize:
         model = quantize_weights(model, nbits=16)
 
     return model
-
 
 def convert_decoder(hparams, model, quantize=False):
     model.eval()
@@ -271,11 +268,11 @@ def convert_decoder(hparams, model, quantize=False):
 
     model = ct.convert(
         traced_model,
-        convert_to=None if quantize else "mlprogram",  # convert will fail if weights are quantized, not sure why
+        convert_to=None if quantize else "mlprogram", # convert will fail if weights are quantized, not sure why
         inputs=[
             ct.TensorType(name="token_data", shape=tokens_shape, dtype=int),
-            ct.TensorType(name="audio_data", shape=audio_shape),
-        ],
+            ct.TensorType(name="audio_data", shape=audio_shape)
+        ]
     )
 
     if quantize:
@@ -286,33 +283,13 @@ def convert_decoder(hparams, model, quantize=False):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--model",
-        type=str,
-        help="model to convert (e.g. tiny, tiny.en, base, base.en, small, small.en, medium, medium.en, large-v1, large-v2, large-v3)",
-        required=True,
-    )
+    parser.add_argument("--model", type=str, help="model to convert (e.g. tiny, tiny.en, base, base.en, small, small.en, medium, medium.en, large-v1, large-v2, large-v3, large-v3-turbo)", required=True)
     parser.add_argument("--encoder-only", type=bool, help="only convert encoder", default=False)
-    parser.add_argument("--quantize", type=bool, help="quantize weights to F16", default=False)
-    parser.add_argument(
-        "--optimize-ane", type=bool, help="optimize for ANE execution (currently broken)", default=False
-    )
+    parser.add_argument("--quantize",     type=bool, help="quantize weights to F16", default=False)
+    parser.add_argument("--optimize-ane", type=bool, help="optimize for ANE execution (currently broken)", default=False)
     args = parser.parse_args()
 
-    if args.model not in [
-        "tiny",
-        "tiny.en",
-        "base",
-        "base.en",
-        "small",
-        "small.en",
-        "small.en-tdrz",
-        "medium",
-        "medium.en",
-        "large-v1",
-        "large-v2",
-        "large-v3",
-    ]:
+    if args.model not in ["tiny", "tiny.en", "base", "base.en", "small", "small.en", "small.en-tdrz", "medium", "medium.en", "large-v1", "large-v2", "large-v3", "large-v3-turbo"]:
         raise ValueError("Invalid model name")
 
     whisper = load_model(args.model).cpu()

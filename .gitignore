@@ -4,30 +4,27 @@ cmake-build-*/
 
 *.o
 *.a
+*.d
 .cache/
 .coreml/
 .test/
+.venv/
 .vs/
 .DS_Store
 .vimspector.json
 /CMakeSettings.json
+/talk-llama.dSYM/
 
 build/
-build-coreml/
-build-em/
-build-debug/
-build-release/
-build-rwdi/
-build-static/
-build-cublas/
-build-no-accel/
-build-sanitize-addr/
-build-sanitize-thread/
+build-*/
 
 # SPM
 .build/
 .swiftpm
 *.metallib
+
+ggml-metal-embed.metal
+ggml-metal-embed.metal.tmp
 
 /main
 /stream

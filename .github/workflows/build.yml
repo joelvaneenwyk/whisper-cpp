@@ -1,8 +1,19 @@
 name: CI
-on: [push, pull_request]
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref && github.ref || github.run_id }}
+  cancel-in-progress: true
 
 env:
   ubuntu_image: "ubuntu:22.04"
+  VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
   VCPKG_TOOLCHAIN: "external/vcpkg/scripts/buildsystems/vcpkg.cmake"
 
 jobs:
@@ -33,9 +44,61 @@ jobs:
             -w /workspace ${{ env.ubuntu_image }} /bin/sh -c '
             set -e
             apt update
-            apt install -y build-essential libsdl2-dev
-            make
-            make stream'
+            apt install -y build-essential libsdl2-dev cmake
+            cmake -B build
+            cmake --build build --config Release -j $(nproc)'
+
+  ubuntu-latest-arm64:
+    runs-on: ubuntu-latest-arm64
+
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [linux/arm64, linux/arm/v7]
+
+    steps:
+      - name: Clone
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Build ${{ matrix.arch }}
+        run: |
+          docker run --platform ${{ matrix.arch }} --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace ${{ env.ubuntu_image }} /bin/sh -c '
+            set -e
+            apt update
+            apt install -y build-essential libsdl2-dev cmake
+            cmake -B build -DGGML_NATIVE=OFF -DGGML_CPU_ARM_ARCH=armv8-a
+            cmake --build build --config Release -j $(nproc)'
+
+  ubuntu-latest-arm-v7:
+    runs-on: ubuntu-latest-arm-v7
+
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [linux/arm64, linux/arm/v7]
+
+    steps:
+      - name: Clone
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Build ${{ matrix.arch }}
+        run: |
+          docker run --platform ${{ matrix.arch }} --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace ${{ env.ubuntu_image }} /bin/sh -c '
+            set -e
+            apt update
+            apt install -y build-essential libsdl2-dev cmake
+            cmake -B build -DGGML_NATIVE=OFF -DGGML_CPU_ARM_ARCH=armv7-a+fp
+            cmake --build build --config Release -j $(nproc)'
 
   macOS-latest:
     # @joelvaneenwyk #todo Disabled to speed up testing.
@@ -52,35 +115,30 @@ jobs:
       - name: Dependencies
         run: |
           brew update
-          brew install sdl2
+          brew install sdl2 cmake
 
       - name: Build
         run: |
-          make
-          make stream
+          cmake -B build
+          cmake --build build --config Release
 
-  freeBSD-latest:
-    # @joelvaneenwyk #todo Disabled to speed up testing.
-    if: github.event_name != 'pull_request' && github.event_name != 'push'
-    runs-on: macos-12
-
-    steps:
-      - name: Clone
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          fetch-depth: 0
-
-      - name: Build
-        uses: cross-platform-actions/action@v0.24.0
-        with:
-          operating_system: freebsd
-          version: '13.2'
-          run: |
-            sudo pkg update
-            sudo pkg install -y gmake sdl2
-            gmake
-            gmake stream
+#  freeBSD-latest:
+#    runs-on: macos-12
+#
+#    steps:
+#      - name: Clone
+#        uses: actions/checkout@v4
+#
+#      - name: Build
+#        uses: cross-platform-actions/action@v0.24.0
+#        with:
+#          operating_system: freebsd
+#          version: '13.3'
+#          run: |
+#            sudo pkg update
+#            sudo pkg install -y gmake sdl2 cmake
+#            cmake -B build
+#            cmake --build build --config Release
 
   ubuntu-latest-gcc:
     # @joelvaneenwyk #todo Disabled to speed up testing.
@@ -91,7 +149,7 @@ jobs:
       fail-fast: false
       matrix:
         build: [Debug, Release]
-        arch: [linux/amd64, linux/arm64, linux/arm/v7, linux/ppc64le]
+        arch: [linux/amd64, linux/ppc64le]
 
     steps:
       - name: Clone
@@ -115,6 +173,62 @@ jobs:
             make
             ctest -L gh --output-on-failure'
 
+  ubuntu-latest-gcc-arm64:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        build: [Debug, Release]
+        arch: [linux/arm64]
+
+    steps:
+      - name: Clone
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Build ${{ matrix.arch }}
+        run: |
+          docker run --platform ${{ matrix.arch }} --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace ${{ env.ubuntu_image }} /bin/sh -c '
+            set -e
+            apt update
+            apt install -y build-essential cmake libsdl2-dev
+            cmake . -DWHISPER_SDL2=ON -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DGGML_NATIVE=OFF -DGGML_CPU_ARM_ARCH=armv8-a
+            make
+            ctest -L gh --output-on-failure'
+
+  ubuntu-latest-gcc-arm-v7:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        build: [Debug, Release]
+        arch: [linux/arm/v7]
+
+    steps:
+      - name: Clone
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Build ${{ matrix.arch }}
+        run: |
+          docker run --platform ${{ matrix.arch }} --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace ${{ env.ubuntu_image }} /bin/sh -c '
+            set -e
+            apt update
+            apt install -y build-essential cmake libsdl2-dev
+            cmake . -DWHISPER_SDL2=ON -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DGGML_NATIVE=OFF -DGGML_CPU_ARM_ARCH=armv7-a+fp
+            make
+            ctest -L gh --output-on-failure'
+
   ubuntu-latest-clang:
     # @joelvaneenwyk #todo Disabled to speed up testing.
     if: github.event_name != 'pull_request' && github.event_name != 'push'
@@ -124,7 +238,10 @@ jobs:
       fail-fast: false
       matrix:
         build: [Debug, Release]
-        arch: [linux/amd64, linux/arm64, linux/arm/v7, linux/ppc64le]
+        #arch: [linux/amd64, linux/arm64, linux/arm/v7, linux/ppc64le]
+        # TODO: arm/v7 disabled due to clang bug
+        #       https://github.com/ggerganov/whisper.cpp/actions/runs/9657764109/job/26637633042?pr=2256#step:4:1990
+        arch: [linux/amd64, linux/arm64, linux/ppc64le]
 
     steps:
       - name: Clone
@@ -325,21 +442,6 @@ jobs:
             mingw-w64-${{matrix.env}}-SDL2
             mingw-w64-${{matrix.env}}-openblas
 
-      - name: Build using make
-        shell: msys2 {0}
-        run: |
-            make -j $(nproc)
-
-      - name: Clean after building using make
-        shell: msys2 {0}
-        run: |
-            make clean
-
-      - name: Build using make w/ OpenBLAS
-        shell: msys2 {0}
-        run: |
-            make WHISPER_OPENBLAS=1 -j $(nproc)
-
       - name: Build using CMake
         shell: msys2 {0}
         run: |
@@ -435,14 +537,9 @@ jobs:
         sdl2: [ON]
         include:
           - arch: Win32
-            obzip: https://github.com/OpenMathLib/OpenBLAS/releases/download/v0.3.25/OpenBLAS-0.3.25-x86.zip
             s2arc: x86
-            clblast: OFF
           - arch: x64
-            obzip: https://github.com/OpenMathLib/OpenBLAS/releases/download/v0.3.25/OpenBLAS-0.3.25-x64.zip
             s2arc: x64
-            clblast: ON
-            clver: 1.6.1
           - sdl2: ON
             s2ver: 2.28.5
 
@@ -453,17 +550,21 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
+      - name: Export GitHub Actions cache environment variables
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v2
 
-      - name: Fetch OpenBLAS
+      - name: Install OpenBLAS and pkgconfiglite
         if: matrix.blas == 'ON'
         run: |
-          C:/msys64/usr/bin/wget.exe -qO blas.zip ${{ matrix.obzip }}
-          7z x blas.zip -oblas -y
-          copy blas/include/cblas.h .
-          copy blas/include/openblas_config.h .
-          echo "OPENBLAS_PATH=$env:GITHUB_WORKSPACE/blas" >> $env:GITHUB_ENV
+          vcpkg install --triplet=${{ matrix.s2arc }}-windows openblas
+          choco install pkgconfiglite
 
       - name: Fetch SDL2 and set SDL2_DIR
         if: matrix.sdl2 == 'ON'
@@ -472,50 +573,33 @@ jobs:
           7z x sdl2.zip
           echo "SDL2_DIR=$env:GITHUB_WORKSPACE/SDL2-${{ matrix.s2ver }}/cmake" >> $env:GITHUB_ENV
 
-      - name: Install OpenCL
-        if: matrix.clblast == 'ON'
-        run: vcpkg.exe --triplet=${{ matrix.arch }}-windows install opencl
-
-      - name: Fetch CLBlast and set CLBlast_DIR
-        if: matrix.clblast == 'ON'
-        run: |
-          C:/msys64/usr/bin/wget.exe -qO clblast.zip https://github.com/CNugteren/CLBlast/releases/download/${{ matrix.clver }}/CLBlast-${{ matrix.clver }}-windows-x64.zip
-          7z x clblast.zip
-          7z x CLBlast-${{ matrix.clver }}-windows-x64.7z
-          echo "CLBlast_DIR=$env:GITHUB_WORKSPACE/CLBlast-${{ matrix.clver }}-windows-x64/lib/cmake/CLBlast" >> $env:GITHUB_ENV
-
       - name: Configure
         run: >
           cmake -S . -B ./build -A ${{ matrix.arch }}
           -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_TOOLCHAIN }}"
           -DCMAKE_BUILD_TYPE=${{ matrix.build }}
-          -DWHISPER_OPENBLAS=${{ matrix.blas }}
-          -DCMAKE_LIBRARY_PATH="$env:OPENBLAS_PATH/lib"
+          -DGGML_BLAS=${{ matrix.blas }}
+          -DGGML_BLAS_VENDOR=OpenBLAS
           -DWHISPER_SDL2=${{ matrix.sdl2 }}
-          -DWHISPER_CLBLAST=${{ matrix.clblast }}
 
       - name: Build
         run: |
           cd ./build
           msbuild ALL_BUILD.vcxproj -t:build -p:configuration=${{ matrix.build }} -p:platform=${{ matrix.arch }}
 
-      - name: Copy libopenblas.dll
+      - name: Copy openblas.dll
         if: matrix.blas == 'ON'
-        run: copy "$env:OPENBLAS_PATH/bin/libopenblas.dll" build/bin/${{ matrix.build }}
+        run: copy "C:/vcpkg/packages/openblas_${{ matrix.s2arc }}-windows/bin/openblas.dll" build/bin/${{ matrix.build }}
 
       - name: Copy SDL2.dll
         if: matrix.sdl2 == 'ON'
         run: copy "$env:SDL2_DIR/../lib/${{ matrix.s2arc }}/SDL2.dll" build/bin/${{ matrix.build }}
 
-      - name: Copy clblast.dll
-        if: matrix.clblast == 'ON'
-        run: copy "$env:CLBlast_DIR/../../clblast.dll" build/bin/${{ matrix.build }}
-
       - name: Upload binaries
         if: matrix.blas == 'ON' && matrix.sdl2 == 'ON'
         uses: actions/upload-artifact@v4
         with:
-          name: whisper-blas${{ matrix.clblast == 'ON' && '-clblast' || ''}}-bin-${{ matrix.arch }}
+          name: whisper-blas-bin-${{ matrix.arch }}
           path: build/bin/${{ matrix.build }}
 
   windows-cublas:
@@ -532,12 +616,10 @@ jobs:
         cuda-toolkit: [12.2.0, 11.8.0]
         include:
           - arch: x64
-            s2arc: x64
-          - sdl2: ON
-            s2ver: 2.28.5
-
+            sdl2: ON
+            sdl2_ver: 2.28.5
     steps:
-      - name: Clone
+      - name: Clone repository
         uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -552,10 +634,13 @@ jobs:
         with:
           cuda: '${{ matrix.cuda-toolkit }}'
 
+      - name: Install 7-Zip
+        run: choco install 7zip -y
+
       - name: Fetch SDL2 and set SDL2_DIR
         if: matrix.sdl2 == 'ON'
         run: |
-          C:/msys64/usr/bin/wget.exe -qO sdl2.zip https://github.com/libsdl-org/SDL/releases/download/release-${{ matrix.s2ver }}/SDL2-devel-${{ matrix.s2ver }}-VC.zip
+          Invoke-WebRequest -Uri https://github.com/libsdl-org/SDL/releases/download/release-${{ matrix.sdl2_ver }}/SDL2-devel-${{ matrix.sdl2_ver }}-VC.zip -OutFile sdl2.zip
           7z x sdl2.zip
           echo "SDL2_DIR=$env:GITHUB_WORKSPACE/SDL2-${{ matrix.s2ver }}/cmake" >> $env:GITHUB_ENV
 
@@ -570,21 +655,18 @@ jobs:
       - name: Build ${{ matrix.cuda-toolkit }}
         run: |
           cd ./build
-          cmake --build . --config ${{ matrix.build }}
+          cmake --build . --config ${{ matrix.build }}          
 
       - name: Copy CUDA DLLs
-        run: >
-          Copy-Item -PassThru
-          -Path "${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/bin/*.dll"
-          -Include cudart64_*,cublas64_*,cublasLt64_*
-          -Destination build/bin/${{ matrix.build }}
+        run: |
+          Get-ChildItem "${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/bin/" -Filter "*.dll" | 
+          Copy-Item -Destination "build/bin/${{ matrix.build }}"
 
       - name: Copy SDL2.dll
         if: matrix.sdl2 == 'ON'
-        run: copy "$env:SDL2_DIR/../lib/${{ matrix.s2arc }}/SDL2.dll" build/bin/${{ matrix.build }}
+        run: copy "$env:SDL2_DIR/../lib/${{ matrix.arch }}/SDL2.dll" build/bin/${{ matrix.build }}
 
       - name: Upload binaries
-        if: matrix.sdl2 == 'ON'
         uses: actions/upload-artifact@v4
         with:
           name: whisper-cublas-${{ matrix.cuda-toolkit }}-bin-${{ matrix.arch }}
@@ -627,7 +709,7 @@ jobs:
         build: [Release]
 
     steps:
-      - name: Clone
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -638,11 +720,34 @@ jobs:
           cp models/for-tests-ggml-base.en.bin models/ggml-base.en.bin
           mkdir models/ggml-base.en-encoder.mlmodelc
 
-      - name: Build objc example
-        run: xcodebuild -project examples/whisper.objc/whisper.objc.xcodeproj -scheme whisper.objc -configuration ${{ matrix.build }} -sdk iphonesimulator build
+      - name: Build
+        id: cmake_build
+        run: |
+          sysctl -a
+          mkdir build
+          cd build
+          cmake -G Xcode .. \
+            -DGGML_METAL_USE_BF16=ON \
+            -DGGML_METAL_EMBED_LIBRARY=ON \
+            -DWHISPER_BUILD_EXAMPLES=OFF \
+            -DWHISPER_BUILD_TESTS=OFF \
+            -DWHISPER_BUILD_SERVER=OFF \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 \
+            -DCMAKE_XCODE_ATTRIBUTE_DEVELOPMENT_TEAM=ggml
+          cmake --build . --config Release -j $(sysctl -n hw.logicalcpu) -- CODE_SIGNING_ALLOWED=NO
+          sudo cmake --install . --config Release
+
+      - name: xcodebuild for swift package
+        id: xcodebuild
+        run: |
+          xcodebuild -scheme whisper-Package -destination 'generic/platform=iOS'
+
+#- name: Build objc example
+#  run: xcodebuild -project examples/whisper.objc/whisper.objc.xcodeproj -scheme whisper.objc -configuration ${{ matrix.build }} -sdk iphoneos build
 
       - name: Build swiftui example
-        run: xcodebuild -project examples/whisper.swiftui/whisper.swiftui.xcodeproj -scheme WhisperCppDemo -configuration ${{ matrix.build }} -sdk iphonesimulator build
+        run: xcodebuild -project examples/whisper.swiftui/whisper.swiftui.xcodeproj -scheme WhisperCppDemo -configuration ${{ matrix.build }} -sdk iphoneos CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY= -destination 'generic/platform=iOS' build
 
   android:
     # @joelvaneenwyk #todo Disabled to speed up testing.
@@ -654,12 +759,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: whisper
-
-      - name: Clone
-        uses: actions/checkout@v4
-        with:
-          repository: ggerganov/ggml
-          path: ggml
 
       - name: Install Java
         uses: actions/setup-java@v4
@@ -679,7 +778,7 @@ jobs:
         run: |
           export PATH_TO_GGML=$PWD/ggml
           cd whisper/examples/whisper.android
-          ./gradlew assembleRelease --no-daemon -PGGML_HOME=$PATH_TO_GGML
+          ./gradlew assembleRelease --no-daemon
 
   android_java:
     # @joelvaneenwyk #todo Disabled to speed up testing.
@@ -771,5 +870,6 @@ jobs:
       - name: Test quantize
         run: |
           ./models/download-ggml-model.sh tiny.en
-          make quantize
-          ./quantize models/ggml-tiny.en.bin models/ggml-tiny.en-q4_0.bin q4_0
+          cmake -B build
+          cmake --build build --config Release
+          ./build/bin/quantize models/ggml-tiny.en.bin models/ggml-tiny.en-q4_0.bin q4_0
