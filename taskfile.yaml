@@ -1,6 +1,5 @@
 # https://taskfile.dev
 # yaml-language-server: $schema=https://taskfile.dev/schema.json
-# https://taskfile.dev
 
 version: "3"
 
@@ -10,9 +9,8 @@ vars:
   VCPKG_EXE: >-
     {{.TASKFILE_DIR}}/external/vcpkg/vcpkg{{if eq OS "windows"}}.exe{{end}}
   VCPKG_BOOTSTRAP: '{{if eq OS "windows"}}{{.VCPKG_BOOTSTRAP_BAT}}{{ else }}{{.VCPKG_BOOTSTRAP_SH}}{{ end }}'
-
-  RUN_WINDOWS: 'cmd /D /E:ON /C'
-  RUN_UNIX: 'sh -c'
+  RUN_WINDOWS: "cmd /D /E:ON /C"
+  RUN_UNIX: "sh -c"
   RUN: '{{if eq OS "windows"}}{{.RUN_WINDOWS}}{{ else }}{{.RUN_UNIX}}{{ end }}'
 
   MSBUILD_EXE_RAW:
@@ -26,17 +24,16 @@ vars:
           break
         fi
       done
-  MSBUILD_EXE: '{{fromSlash .MSBUILD_EXE_RAW}}'
-
-  BUILD_INT_DIR: ".build/tasks"
-  BUILD_DIR: "{{ joinPath .TASKFILE_DIR .BUILD_INT_DIR }}"
+  MSBUILD_EXE: "{{fromSlash .MSBUILD_EXE_RAW}}"
+  BUILD_INT_DIR: "{{.TASKFILE_DIR}}/.build/tasks"
+  BUILD_DIR: "{{fromSlash .BUILD_INT_DIR}}"
 
   CONFIG: Release
   ARCHITECTURE: x64
   USE_SDL2: ON
   GENERATOR: '{{if eq OS "windows"}}Visual Studio 17 2022{{else}}Unix Makefiles{{end}}'
-  TOOLCHAIN: 'external/vcpkg/scripts/buildsystems/vcpkg.cmake'
-  SLN_PATH: .build/tasks/whisper.cpp.sln
+  TOOLCHAIN: "{{.TASKFILE_DIR}}/external/vcpkg/scripts/buildsystems/vcpkg.cmake"
+  SLN: '{{ joinPath .BUILD_DIR "whisper.cpp.sln" | fromSlash }}'
 
 env:
   VCPKG_DISABLE_METRICS: 1
@@ -50,9 +47,9 @@ tasks:
   commit-prepare:
     deps: [build]
     vars:
-      COMMIT_MSG: 'Update'
-      IOS_BINDINGS_DIR: '{{.TASKFILE_DIR}}/bindings/ios'
-      IOS_BINDINGS_MAKEFILE: '{{.TASKFILE_DIR}}/bindings/ios/Makefile'
+      COMMIT_MSG: "Update"
+      IOS_BINDINGS_DIR: "{{.TASKFILE_DIR}}/bindings/ios"
+      IOS_BINDINGS_MAKEFILE: "{{.TASKFILE_DIR}}/bindings/ios/Makefile"
     cmds:
       - cmd: 'git -C "{{ .IOS_BINDINGS_DIR }}" checkout -q -- "{{ fromSlash .IOS_BINDINGS_MAKEFILE }}"'
         ignore_error: true
@@ -121,37 +118,31 @@ tasks:
 
   build:
     deps: [configure]
-    vars:
-      SOLUTION: '{{ joinPath .TASKFILE_DIR .SLN_PATH }}'
     sources:
-      - '{{ .SOLUTION }}'
+      - "{{ .SLN }}"
     generates:
       - '{{ joinPath .BUILD_DIR "bin" "Debug" "main.exe" }}'
       - '{{ joinPath .BUILD_DIR "bin" "Release" "main.exe" }}'
     cmds:
       - task: msbuild
-        vars: {
-          CONFIG: Debug,
-          PLATFORM: '{{ .ARCHITECTURE }}',
-          SLN: '{{ .SOLUTION }}'
-        }
+        vars:
+          { CONFIG: Debug, PLATFORM: "{{ .ARCHITECTURE }}", SLN: "{{ .SLN }}" }
       - task: msbuild
-        vars: {
-          CONFIG: Release,
-          PLATFORM: '{{ .ARCHITECTURE }}',
-          SLN: '{{ .SOLUTION }}'
-        }
+        vars:
+          {
+            CONFIG: Release,
+            PLATFORM: "{{ .ARCHITECTURE }}",
+            SLN: "{{ .SLN }}",
+          }
 
   configure:
     deps: [vcpkg-integrate]
-    vars:
-      SOLUTION: '{{ joinPath .TASKFILE_DIR .SLN_PATH }}'
     preconditions:
-      - 'cmake --version'
+      - "cmake --version"
     sources:
       - CMakeLists.txt
     generates:
-      - '{{ .SOLUTION }}'
+      - "{{ .SLN }}"
     cmds:
       - cmd: >
           cmake
@@ -161,12 +152,10 @@ tasks:
           -A "{{ .ARCHITECTURE }}"
           -DCMAKE_BUILD_TYPE="{{ .CONFIG }}"
           -DWHISPER_SDL2={{ .USE_SDL2 }}
-          -DCMAKE_TOOLCHAIN_FILE="{{ joinPath .TASKFILE_DIR .TOOLCHAIN }}"
+          -DCMAKE_TOOLCHAIN_FILE="{{ fromSlash .TOOLCHAIN }}"
 
   msbuild:
     internal: true
-    requires:
-      vars: [MSBUILD_EXE, SLN]
     deps: [install-dependencies]
     vars:
       CONFIG: '{{.CONFIG | default "Debug"}}'
@@ -189,7 +178,7 @@ tasks:
   scoop-install:
     desc: Install libraries with scoop
     status:
-      - 'scoop --version'
+      - "scoop --version"
     cmds:
       - cmd: pwsh -NoProfile -Command 'iex "& {$(irm get.scoop.sh)} -RunAsAdmin"'
         platforms: [windows]
@@ -208,7 +197,6 @@ tasks:
     deps: [vcpkg-download]
     vars:
       OUTPUT_LOG_PATH: '{{ joinPath .BUILD_INT_DIR "vcpkg-integrate.log" }}'
-    dir: "{{.TASKFILE_DIR}}"
     status:
       - 'test -f "{{ .OUTPUT_LOG_PATH}}"'
       - 'test "{{ .VCPKG_BRANCH }}" -ne "HEAD"'
