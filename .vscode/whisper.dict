@@ -114,6 +114,7 @@ pwsh
 Pybind
 pylint
 pyright
+pyyaml
 qntvr
 rocm
 rwdi
@@ -140,6 +141,8 @@ TDRZ
 temurin
 thold
 tinydiarize
+torchaudio
+torchvision
 ucrt
 UCRT
 vcpkg
