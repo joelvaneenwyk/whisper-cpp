@@ -6,6 +6,7 @@ version: "3"
 vars:
   VCPKG_BOOTSTRAP_BAT: "{{.TASKFILE_DIR}}/external/vcpkg/bootstrap-vcpkg.bat"
   VCPKG_BOOTSTRAP_SH: "{{.TASKFILE_DIR}}/external/vcpkg/bootstrap-vcpkg.sh"
+  VCPKG_ROOT: "{{.TASKFILE_DIR}}/external/vcpkg"
   VCPKG_EXE: >-
     {{.TASKFILE_DIR}}/external/vcpkg/vcpkg{{if eq OS "windows"}}.exe{{end}}
   VCPKG_BOOTSTRAP: '{{if eq OS "windows"}}{{.VCPKG_BOOTSTRAP_BAT}}{{ else }}{{.VCPKG_BOOTSTRAP_SH}}{{ end }}'
@@ -111,7 +112,7 @@ tasks:
     vars:
       CONFIG: '{{ default "Debug" .CONFIG }}'
       OUTPUT_DIR: '{{ joinPath .BUILD_DIR "bin" .CONFIG | fromSlash }}'
-      OUTPUT_EXE: '{{ joinPath .OUTPUT_DIR "main.exe" }}'
+      OUTPUT_EXE: '{{ joinPath .OUTPUT_DIR "whisper-cli.exe" }}'
     preconditions:
       - 'test -f "{{.OUTPUT_EXE}}"'
     cmds:
@@ -122,8 +123,8 @@ tasks:
     sources:
       - "{{ .SLN }}"
     generates:
-      - '{{ joinPath .BUILD_DIR "bin" "Debug" "main.exe" }}'
-      - '{{ joinPath .BUILD_DIR "bin" "Release" "main.exe" }}'
+      - '{{ joinPath .BUILD_DIR "bin" "Debug" "whisper-cli.exe" }}'
+      - '{{ joinPath .BUILD_DIR "bin" "Release" "whisper-cli.exe" }}'
     cmds:
       - task: msbuild
         vars:
@@ -187,26 +188,23 @@ tasks:
         ignore_error: true
 
   git-submodule-init:
-    status:
-      - 'test -f "{{.VCPKG_BOOTSTRAP}}"'
+    sources:
+      - .gitmodules
+    generates:
+      - external/vcpkg/README.md
     cmds:
       - cmd: 'git -C "{{.TASKFILE_DIR}}" submodule update --init --recursive'
 
   vcpkg-integrate:
     deps: [vcpkg-download]
-    vars:
-      OUTPUT_LOG_PATH: '{{ joinPath .BUILD_INT_DIR "vcpkg-integrate.log" }}'
-    status:
-      - 'test -f "{{ .OUTPUT_LOG_PATH}}"'
-      - 'test "{{ .VCPKG_BRANCH }}" -ne "HEAD"'
+    sources:
+      - vcpkg.json
+    generates:
+      - vcpkg_installed/vcpkg/status
     cmds:
-      - cmd: >-
-          mkdir -p "{{ dir .OUTPUT_LOG_PATH | fromSlash }}"
-        ignore_error: true
-      - cmd: >
-          "{{ fromSlash .VCPKG_EXE }}" integrate install
-      - cmd: >-
-          "{{ fromSlash .VCPKG_EXE }}" install --allow-unsupported
+      - cmd: |
+          "{{ fromSlash .VCPKG_EXE }}" --vcpkg-root "{{ fromSlash .VCPKG_ROOT }}" integrate install
+          "{{ fromSlash .VCPKG_EXE }}" --vcpkg-root "{{ fromSlash .VCPKG_ROOT }}" install --allow-unsupported
 
   vcpkg-download:
     deps: [git-submodule-init]
