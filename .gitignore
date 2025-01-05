@@ -75,3 +75,5 @@ dist/
 /CMakeFiles/
 .ruff_cache/
 .build/
+
+/.git/

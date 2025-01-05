@@ -34,6 +34,7 @@ vars:
   GENERATOR: '{{if eq OS "windows"}}Visual Studio 17 2022{{else}}Unix Makefiles{{end}}'
   TOOLCHAIN: "{{.TASKFILE_DIR}}/external/vcpkg/scripts/buildsystems/vcpkg.cmake"
   SLN: '{{ joinPath .BUILD_DIR "whisper.cpp.sln" | fromSlash }}'
+  CMAKE: msvc-dev-cmd -- uv run cmake
 
 env:
   VCPKG_DISABLE_METRICS: 1
@@ -137,15 +138,13 @@ tasks:
 
   configure:
     deps: [vcpkg-integrate]
-    preconditions:
-      - "cmake --version"
     sources:
       - CMakeLists.txt
     generates:
       - "{{ .SLN }}"
     cmds:
       - cmd: >
-          cmake
+          {{ .CMAKE }}
           -S "{{ .TASKFILE_DIR }}"
           -B "{{ .BUILD_DIR }}"
           -G "{{ .GENERATOR }}"
@@ -211,17 +210,14 @@ tasks:
 
   vcpkg-download:
     deps: [git-submodule-init]
-    # status:
-    #   - 'test -f "{{ fromSlash .VCPKG_EXE}}"'
+    sources:
+      - .gitmodules
+    generates:
+      - external/vcpkg/README.md
+      - external/vcpkg/vcpkg.disable-metrics
     cmds:
       - cmd: git add .
-      - cmd: |
-          if [ ! "$(git rev-parse --abbrev-ref --symbolic-full-name HEAD || true)" = "HEAD" ]; then
-            git submodule deinit -f external/vcpkg
-          fi
-        ignore_error: true
-      - cmd: git submodule update --init --recursive --checkout
-        ignore_error: true
+      - cmd: git submodule update --init --recursive
       - cmd: '{{.RUN}} "{{ fromSlash .VCPKG_BOOTSTRAP }}" -disableMetrics'
 
   update-samples:
