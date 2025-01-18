@@ -193,7 +193,9 @@ tasks:
     generates:
       - external/vcpkg/README.md
     cmds:
-      - cmd: 'git -C "{{.TASKFILE_DIR}}" submodule update --init --recursive'
+      - cmd: |
+          git -C "{{.TASKFILE_DIR}}" submodule update --init --recursive --force
+        ignore_error: true
 
   vcpkg-integrate:
     deps: [vcpkg-download]
@@ -204,7 +206,6 @@ tasks:
     cmds:
       - cmd: |
           "{{ fromSlash .VCPKG_EXE }}" --vcpkg-root "{{ fromSlash .VCPKG_ROOT }}" integrate install
-          "{{ fromSlash .VCPKG_EXE }}" --vcpkg-root "{{ fromSlash .VCPKG_ROOT }}" install --allow-unsupported
 
   vcpkg-download:
     deps: [git-submodule-init]
