@@ -1,28 +1,29 @@
 # whisper.cpp for SYCL
 
-[Background](#background)
-
-[OS](#os)
-
-[Intel GPU](#intel-gpu)
-
-[Linux](#linux)
-
-[Environment Variable](#environment-variable)
-
-[Known Issue](#known-issue)
-
-[Todo](#todo)
+- [whisper.cpp for SYCL](#whispercpp-for-sycl)
+  - [Background](#background)
+  - [OS](#os)
+  - [Intel GPU](#intel-gpu)
+  - [Linux](#linux)
+    - [Setup Environment](#setup-environment)
+      - [1. Install Intel GPU driver](#1-install-intel-gpu-driver)
+      - [2. Install Intel oneAPI Base toolkit](#2-install-intel-oneapi-base-toolkit)
+    - [Run](#run)
+  - [Environment Variable](#environment-variable)
+    - [Build](#build)
+    - [Running](#running)
+  - [Known Issue](#known-issue)
+  - [Todo](#todo)
 
 ## Background
 
-SYCL is a higher-level programming model to improve programming productivity on various hardware accelerators—such as CPUs, GPUs, and FPGAs. It is a single-source embedded domain-specific language based on pure C++17.
+SYCL is a higher-level programming model to improve programming productivity on various hardware accelerators such as CPUs, GPUs, and FPGAs. It is a single-source embedded domain-specific language based on pure C++17.
 
 oneAPI is a specification that is open and standards-based, supporting multiple architecture types including but not limited to GPU, CPU, and FPGA. The spec has both direct programming and API-based programming paradigms.
 
 Intel uses the SYCL as direct programming language to support CPU, GPUs and FPGAs.
 
-To avoid  re-inventing the wheel, this code refers other code paths in llama.cpp (like OpenBLAS, cuBLAS, CLBlast). We use a open-source tool [SYCLomatic](https://github.com/oneapi-src/SYCLomatic) (Commercial release [Intel® DPC++ Compatibility Tool](https://www.intel.com/content/www/us/en/developer/tools/oneapi/dpc-compatibility-tool.html)) migrate to SYCL.
+To avoid  re-inventing the wheel, this code refers other code paths in llama.cpp (like OpenBLAS, cuBLAS, CLBlast). We use a open-source tool [SYCLomatic](https://github.com/oneapi-src/SYCLomatic) (Commercial release [Intelï¿½ DPC++ Compatibility Tool](https://www.intel.com/content/www/us/en/developer/tools/oneapi/dpc-compatibility-tool.html)) migrate to SYCL.
 
 The whisper.cpp for SYCL is used to support Intel GPUs.
 
@@ -35,7 +36,6 @@ For Intel CPU, recommend to use whisper.cpp for X86 (Intel MKL build).
 |Linux|Support|Ubuntu 22.04|
 |Windows|Ongoing| |
 
-
 ## Intel GPU
 
 |Intel GPU| Status | Verified Model|
@@ -46,64 +46,62 @@ For Intel CPU, recommend to use whisper.cpp for X86 (Intel MKL build).
 |Intel built-in Arc GPU| Support| built-in Arc GPU in Meteor Lake|
 |Intel iGPU| Support| iGPU in i5-1250P, i7-1165G7|
 
-
 ## Linux
 
 ### Setup Environment
 
-1. Install Intel GPU driver.
+#### 1. Install Intel GPU driver
 
-a. Please install Intel GPU driver by official guide: [Install GPU Drivers](https://dgpu-docs.intel.com/driver/installation.html).
+1. Please install Intel GPU driver by official guide: [Install GPU Drivers](https://dgpu-docs.intel.com/driver/installation.html).
 
-Note: for iGPU, please install the client GPU driver.
+    Note: for iGPU, please install the client GPU driver.
 
-b. Add user to group: video, render.
+2. Add user to group: video, render.
 
-```
-sudo usermod -aG render username
-sudo usermod -aG video username
-```
+    ```sh
+    sudo usermod -aG render username
+    sudo usermod -aG video username
+    ```
 
-Note: re-login to enable it.
+    Note: re-login to enable it.
 
-c. Check
+3. Check
 
-```
-sudo apt install clinfo
-sudo clinfo -l
-```
+    ```sh
+    sudo apt install clinfo
+    sudo clinfo -l
+    ```
 
 Output (example):
 
-```
+```text
 Platform #0: Intel(R) OpenCL Graphics
  `-- Device #0: Intel(R) Arc(TM) A770 Graphics
-
 
 Platform #0: Intel(R) OpenCL HD Graphics
  `-- Device #0: Intel(R) Iris(R) Xe Graphics [0x9a49]
 ```
 
-2. Install Intel® oneAPI Base toolkit.
+#### 2. Install Intel oneAPI Base toolkit
 
+1. Please follow the procedure in [Get the Intelï¿½ oneAPI Base Toolkit](https://www.intel.com/content/www/us/en/developer/tools/oneapi/base-toolkit.html).
 
-a. Please follow the procedure in [Get the Intel® oneAPI Base Toolkit ](https://www.intel.com/content/www/us/en/developer/tools/oneapi/base-toolkit.html).
+    Recommend to install to default folder: **/opt/intel/oneapi**.
 
-Recommend to install to default folder: **/opt/intel/oneapi**.
+    Following guide use the default folder as example. If you use other folder, please modify the following guide info with your folder.
 
-Following guide use the default folder as example. If you use other folder, please modify the following guide info with your folder.
+2. Check
 
-b. Check
+    ```sh
+    source /opt/intel/oneapi/setvars.sh
 
-```
-source /opt/intel/oneapi/setvars.sh
-
-sycl-ls
-```
+    sycl-ls
+    ```
 
 There should be one or more level-zero devices. Like **[ext_oneapi_level_zero:gpu:0]**.
 
 Output (example):
+
 ```
 [opencl:acc:0] Intel(R) FPGA Emulation Platform for OpenCL(TM), Intel(R) FPGA Emulation Device OpenCL 1.2  [2023.16.10.0.17_160000]
 [opencl:cpu:1] Intel(R) OpenCL, 13th Gen Intel(R) Core(TM) i7-13700K OpenCL 3.0 (Build 0) [2023.16.10.0.17_160000]
@@ -120,7 +118,7 @@ cd build
 source /opt/intel/oneapi/setvars.sh
 
 #for FP16
-#cmake .. -DWHISPER_SYCL=ON -DCMAKE_C_COMPILER=icx -DCMAKE_CXX_COMPILER=icpx -DWHISPER_SYCL_F16=ON 
+#cmake .. -DWHISPER_SYCL=ON -DCMAKE_C_COMPILER=icx -DCMAKE_CXX_COMPILER=icpx -DWHISPER_SYCL_F16=ON
 
 #for FP32
 cmake .. -DWHISPER_SYCL=ON -DCMAKE_C_COMPILER=icx -DCMAKE_CXX_COMPILER=icpx
@@ -146,86 +144,84 @@ Note:
 ### Run
 
 1. Put model file to folder **models**
-
 2. Enable oneAPI running environment
 
-```
-source /opt/intel/oneapi/setvars.sh
-```
+    ```sh
+    source /opt/intel/oneapi/setvars.sh
+    ```
 
 3. List device ID
 
-Run without parameter:
+    Run without parameter:
 
-```
-./build/bin/ls-sycl-device
+    ```sh
+    ./build/bin/ls-sycl-device
+    ```
 
-or
+    or
 
-./build/bin/main
-```
+    ```sh
+    ./build/bin/main
+    ```
 
-Check the ID in startup log, like:
+    Check the ID in startup log, like:
 
-```
-found 4 SYCL devices:
-  Device 0: Intel(R) Arc(TM) A770 Graphics,	compute capability 1.3,
-    max compute_units 512,	max work group size 1024,	max sub group size 32,	global mem size 16225243136
-  Device 1: Intel(R) FPGA Emulation Device,	compute capability 1.2,
-    max compute_units 24,	max work group size 67108864,	max sub group size 64,	global mem size 67065057280
-  Device 2: 13th Gen Intel(R) Core(TM) i7-13700K,	compute capability 3.0,
-    max compute_units 24,	max work group size 8192,	max sub group size 64,	global mem size 67065057280
-  Device 3: Intel(R) Arc(TM) A770 Graphics,	compute capability 3.0,
-    max compute_units 512,	max work group size 1024,	max sub group size 32,	global mem size 16225243136
+    ```text
+    found 4 SYCL devices:
+    Device 0: Intel(R) Arc(TM) A770 Graphics, compute capability 1.3,
+        max compute_units 512, max work group size 1024, max sub group size 32, global mem size 16225243136
+    Device 1: Intel(R) FPGA Emulation Device, compute capability 1.2,
+        max compute_units 24, max work group size 67108864, max sub group size 64, global mem size 67065057280
+    Device 2: 13th Gen Intel(R) Core(TM) i7-13700K, compute capability 3.0,
+        max compute_units 24, max work group size 8192, max sub group size 64, global mem size 67065057280
+    Device 3: Intel(R) Arc(TM) A770 Graphics, compute capability 3.0,
+        max compute_units 512, max work group size 1024, max sub group size 32, global mem size 16225243136
+    ```
 
-```
-
-|Attribute|Note|
-|-|-|
-|compute capability 1.3|Level-zero running time, recommended |
-|compute capability 3.0|OpenCL running time, slower than level-zero in most cases|
+    | Attribute              | Note                                                      |
+    |------------------------|-----------------------------------------------------------|
+    | compute capability 1.3 | Level-zero running time, recommended                      |
+    | compute capability 3.0 | OpenCL running time, slower than level-zero in most cases |
 
 4. Set device ID and execute whisper.cpp
 
-Set device ID = 0 by **GGML_SYCL_DEVICE=0**
+    Set device ID = 0 by **GGML_SYCL_DEVICE=0**
 
-```
-GGML_SYCL_DEVICE=0 ./build/bin/main -m models/ggml-base.en.bin -f samples/jfk.wav
-```
-or run by script:
+    ```sh
+    GGML_SYCL_DEVICE=0 ./build/bin/main -m models/ggml-base.en.bin -f samples/jfk.wav
+    ```
 
-```
-./examples/sycl/run_whisper.sh
-```
+    or run by script:
 
-
+    ```sh
+    ./examples/sycl/run_whisper.sh
+    ```
 
 5. Check the device ID in output
 
-Like:
-```
-Using device **0** (Intel(R) Arc(TM) A770 Graphics) as main device
-```
+    Like:
 
+    ```sh
+    Using device **0** (Intel(R) Arc(TM) A770 Graphics) as main device
+    ```
 
 ## Environment Variable
 
-#### Build
+### Build
 
-|Name|Value|Function|
-|-|-|-|
-|WHISPER_SYCL|ON (mandatory)|Enable build with SYCL code path. <br>For FP32/FP16, WHISPER_SYCL=ON is mandatory.|
-|WHISPER_SYCL_F16|ON (optional)|Enable FP16 build with SYCL code path.For FP32, do not set it.|
-|CMAKE_C_COMPILER|icx|Use icx compiler for SYCL code path|
-|CMAKE_CXX_COMPILER|icpx|use icpx for SYCL code path|
+| Name               | Value          | Function                                                                           |
+|--------------------|----------------|------------------------------------------------------------------------------------|
+| WHISPER_SYCL       | ON (mandatory) | Enable build with SYCL code path. <br>For FP32/FP16, WHISPER_SYCL=ON is mandatory. |
+| WHISPER_SYCL_F16   | ON (optional)  | Enable FP16 build with SYCL code path.For FP32, do not set it.                     |
+| CMAKE_C_COMPILER   | icx            | Use icx compiler for SYCL code path                                                |
+| CMAKE_CXX_COMPILER | icpx           | use icpx for SYCL code path                                                        |
 
-#### Running
+### Running
 
-
-|Name|Value|Function|
-|-|-|-|
-|GGML_SYCL_DEVICE|0 (default) or 1|Set the device id used. Check the device ids by default running output|
-|GGML_SYCL_DEBUG|0 (default) or 1|Enable log function by macro: GGML_SYCL_DEBUG|
+| Name             | Value            | Function                                                               |
+|------------------|------------------|------------------------------------------------------------------------|
+| GGML_SYCL_DEVICE | 0 (default) or 1 | Set the device id used. Check the device ids by default running output |
+| GGML_SYCL_DEBUG  | 0 (default) or 1 | Enable log function by macro: GGML_SYCL_DEBUG                          |
 
 ## Known Issue
 
@@ -234,7 +230,6 @@ Using device **0** (Intel(R) Arc(TM) A770 Graphics) as main device
   Miss to enable oneAPI running environment.
 
   Install oneAPI base toolkit and enable it by: `source /opt/intel/oneapi/setvars.sh`.
-
 
 - Hang during startup
 
@@ -245,5 +240,4 @@ Using device **0** (Intel(R) Arc(TM) A770 Graphics) as main device
 ## Todo
 
 - Support to build in Windows.
-
 - Support multiple cards.
