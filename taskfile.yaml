@@ -35,7 +35,7 @@ vars:
   GENERATOR: '{{if eq OS "windows"}}Visual Studio 17 2022{{else}}Unix Makefiles{{end}}'
   TOOLCHAIN: "{{.TASKFILE_DIR}}/external/vcpkg/scripts/buildsystems/vcpkg.cmake"
   SLN: '{{ joinPath .BUILD_DIR "whisper.cpp.sln" | fromSlash }}'
-  CMAKE: msvc-dev-cmd -- uv run cmake
+  CMAKE: uv run cmake
 
 env:
   VCPKG_DISABLE_METRICS: 1
