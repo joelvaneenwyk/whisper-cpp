@@ -17,8 +17,8 @@ env:
   VCPKG_TOOLCHAIN: "external/vcpkg/scripts/buildsystems/vcpkg.cmake"
 
 jobs:
-  ubuntu-latest:
-    runs-on: ubuntu-latest
+  ubuntu-22:
+    runs-on: ubuntu-22.04
 
     strategy:
       fail-fast: false
@@ -48,8 +48,8 @@ jobs:
             cmake -B build
             cmake --build build --config Release -j $(nproc)'
 
-  ubuntu-latest-arm64:
-    runs-on: ubuntu-latest
+  ubuntu-22-arm64:
+    runs-on: ubuntu-22.04
 
     strategy:
       fail-fast: false
@@ -74,8 +74,8 @@ jobs:
             cmake -B build -DGGML_NATIVE=OFF -DGGML_CPU_ARM_ARCH=armv8-a
             cmake --build build --config Release -j $(nproc)'
 
-  ubuntu-latest-arm-v7:
-    runs-on: ubuntu-latest
+  ubuntu-22-arm-v7:
+    runs-on: ubuntu-22.04
 
     strategy:
       fail-fast: false
@@ -140,10 +140,10 @@ jobs:
 #            cmake -B build
 #            cmake --build build --config Release
 
-  ubuntu-latest-gcc:
+  ubuntu-22-gcc:
     # @joelvaneenwyk #todo Disabled to speed up testing.
     if: github.event_name != 'pull_request' && github.event_name != 'push'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     strategy:
       fail-fast: false
@@ -173,8 +173,8 @@ jobs:
             make
             ctest -L gh --output-on-failure'
 
-  ubuntu-latest-gcc-arm64:
-    runs-on: ubuntu-latest
+  ubuntu-22-gcc-arm64:
+    runs-on: ubuntu-22.04
 
     strategy:
       fail-fast: false
@@ -201,8 +201,8 @@ jobs:
             make
             ctest -L gh --output-on-failure'
 
-  ubuntu-latest-gcc-arm-v7:
-    runs-on: ubuntu-latest
+  ubuntu-22-gcc-arm-v7:
+    runs-on: ubuntu-22.04
 
     strategy:
       fail-fast: false
@@ -229,10 +229,10 @@ jobs:
             make
             ctest -L gh --output-on-failure'
 
-  ubuntu-latest-clang:
+  ubuntu-22-clang:
     # @joelvaneenwyk #todo Disabled to speed up testing.
     if: github.event_name != 'pull_request' && github.event_name != 'push'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     strategy:
       fail-fast: false
@@ -269,10 +269,10 @@ jobs:
             make
             ctest -L gh --output-on-failure'
 
-  ubuntu-latest-gcc-sanitized:
+  ubuntu-22-gcc-sanitized:
     # @joelvaneenwyk #todo Disabled to speed up testing.
     if: github.event_name != 'pull_request' && github.event_name != 'push'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     strategy:
       fail-fast: false
@@ -642,24 +642,28 @@ jobs:
         run: |
           Invoke-WebRequest -Uri https://github.com/libsdl-org/SDL/releases/download/release-${{ matrix.sdl2_ver }}/SDL2-devel-${{ matrix.sdl2_ver }}-VC.zip -OutFile sdl2.zip
           7z x sdl2.zip
-          echo "SDL2_DIR=$env:GITHUB_WORKSPACE/SDL2-${{ matrix.s2ver }}/cmake" >> $env:GITHUB_ENV
+          echo "SDL2_DIR=${{ github.workspace }}\SDL2-${{ matrix.sdl2_ver }}\cmake" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "${{ github.workspace }}\SDL2-${{ matrix.sdl2_ver }}\cmake" > SDL2_PATH.txt
 
-      - name: Configure
-        run: >
-          cmake -S . -B ./build -A ${{ matrix.arch }}
-          -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_TOOLCHAIN }}"
-          -DCMAKE_BUILD_TYPE=${{ matrix.build }}
-          -DWHISPER_CUBLAS=${{ matrix.cublas }}
-          -DWHISPER_SDL2=${{ matrix.sdl2 }}
+      - name: Configure CMake
+        shell: cmd
+        run: |
+          cmake -S . -B ./build -A ${{ matrix.arch }} ^
+            -DCMAKE_BUILD_TYPE=${{ matrix.build }} ^
+            -DGGML_CUDA=${{ matrix.cublas }} ^
+            -DCMAKE_CUDA_ARCHITECTURES=all  ^
+            -DWHISPER_SDL2=${{ matrix.sdl2 }} ^
+            -DSDL2_DIR="%SDL2_DIR%"
 
-      - name: Build ${{ matrix.cuda-toolkit }}
+      - name: Build Project
+        shell: cmd
         run: |
           cd ./build
-          cmake --build . --config ${{ matrix.build }}          
+          cmake --build . --config ${{ matrix.build }}
 
       - name: Copy CUDA DLLs
         run: |
-          Get-ChildItem "${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/bin/" -Filter "*.dll" | 
+          Get-ChildItem "${{ steps.cuda-toolkit.outputs.CUDA_PATH }}/bin/" -Filter "*.dll" |
           Copy-Item -Destination "build/bin/${{ matrix.build }}"
 
       - name: Copy SDL2.dll
@@ -675,7 +679,7 @@ jobs:
   emscripten:
     # @joelvaneenwyk #todo Disabled to speed up testing.
     if: github.event_name != 'pull_request' && github.event_name != 'push'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     strategy:
       matrix:
@@ -752,7 +756,7 @@ jobs:
   android:
     # @joelvaneenwyk #todo Disabled to speed up testing.
     if: github.event_name != 'pull_request' && github.event_name != 'push'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Clone
@@ -783,7 +787,7 @@ jobs:
   android_java:
     # @joelvaneenwyk #todo Disabled to speed up testing.
     if: github.event_name != 'pull_request' && github.event_name != 'push'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Clone
@@ -858,7 +862,7 @@ jobs:
   quantize:
     # @joelvaneenwyk #todo Disabled to speed up testing.
     if: github.event_name != 'pull_request' && github.event_name != 'push'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Clone
