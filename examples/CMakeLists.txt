@@ -15,10 +15,6 @@ if (WHISPER_SDL2)
     find_package(SDL2 CONFIG REQUIRED)
 endif()
 
-if (WHISPER_CLBLAST)
-    find_package(CLBlast REQUIRED)
-endif()
-
 # common
 
 set(TARGET common)
@@ -57,6 +53,8 @@ add_library(${TARGET} STATIC
     common.cpp
     common-ggml.h
     common-ggml.cpp
+    common-whisper.h
+    common-whisper.cpp
     grammar-parser.h
     grammar-parser.cpp
     ${COMMON_SOURCES_FFMPEG}

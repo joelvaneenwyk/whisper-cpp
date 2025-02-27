@@ -25,14 +25,10 @@ if (WHISPER_SDL2)
         unicode-data.cpp)
     target_include_directories(${TARGET} PRIVATE ${SDL2_INCLUDE_DIRS})
 
-    if (WHISPER_CLBLAST)
-        set(CLBLAST_LIBNAME clblast)
-    endif ()
-
     target_link_libraries(${TARGET}
         PRIVATE
         common common-sdl whisper
-        ${CLBLAST_LIBNAME} ${CMAKE_THREAD_LIBS_INIT}
+        ${SDL2_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT}
         $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
         $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
     )
